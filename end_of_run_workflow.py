@@ -80,7 +80,7 @@ def log_completion(dry_run=False):
 def end_of_run_workflow(stop_doc, api_key=None, dry_run=False):
     load_dotenv()
     uid = stop_doc["run_start"]
-    run = get_run_migration(uid, api_key=api_key) 
-    run.validate(raise_on_error=True) 
+    run = get_run_migration(uid, api_key=api_key)
+    run.validate(raise_on_error=True)
     log_completion(dry_run=dry_run)
     return True
