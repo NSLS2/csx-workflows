@@ -7,13 +7,13 @@ from prefect.settings import PREFECT_UI_URL
 from data_validation import get_run_migration
 from dotenv import load_dotenv
 
-CATALOG_NAME = "tla"
+CATALOG_NAME = "csx"
 
 
 def slack(func):
     """
-    Send a message to mon-prefect and mon-prefect-program slack channels if the flow-run failed.
-    Send a message to mon-prefect-tla slack channel with the flow-run status.
+    Send a message to mon-prefect and mon-prefect-est slack channels if the flow-run failed.
+    Send a message to mon-prefect-csx slack channel with the flow-run status.
     Send a message to mon-bluesky slack channel if the bluesky-run failed.
 
     NOTE: the name of this inner function is the same as the real end_of_workflow() function because
@@ -27,8 +27,8 @@ def slack(func):
         # Load slack credentials that are saved in Prefect.
         mon_prefect = SlackWebhook.load("mon-prefect")
         mon_bluesky = SlackWebhook.load("mon-bluesky")
-        mon_prefect_tla = SlackWebhook.load("mon-prefect-tla")
-        mon_prefect_program = SlackWebhook.load("mon-prefect-program")
+        mon_prefect_csx = SlackWebhook.load("mon-prefect-csx")
+        mon_prefect_est = SlackWebhook.load("mon-prefect-est")
 
         # Get the uid.
         uid = stop_doc["run_start"]
@@ -47,24 +47,24 @@ def slack(func):
         try:
             result = func(stop_doc, api_key=api_key, dry_run=dry_run)
 
-            # Send a message to mon-prefect-tla if flow-run is successful.
+            # Send a message to mon-prefect-csx if flow-run is successful.
             message = f":white_check_mark: {CATALOG_NAME} flow-run successful. (*{flow_run_name}*)\n ```run_start: {uid}\nscan_id: {scan_id}```"
-            mon_prefect_tla.notify(message)
+            mon_prefect_csx.notify(message)
             return result
         except Exception as e:
             tb = traceback.format_exception_only(e)
 
-            # Send a message to mon-prefect-tla, mon-prefect if flow-run failed.
+            # Send a message to mon-prefect-csx, mon-prefect if flow-run failed.
             message = f":bangbang: {CATALOG_NAME} flow-run failed. (*{flow_run_name}*)\n ```run_start: {uid}\nscan_id: {scan_id}``` ```{tb[-1]}```"
             mon_prefect.notify(message)
-            mon_prefect_tla.notify(message)
+            mon_prefect_csx.notify(message)
             flow_run = FlowRunContext.get().flow_run
-            # Add link to flow-run for the message to mon-prefect-program.
+            # Add link to flow-run for the message to mon-prefect-est.
             program_message = (
                 f":bangbang: {CATALOG_NAME} flow-run failed. <{PREFECT_UI_URL.value()}/flow-runs/"
                 + f"flow-run/{flow_run.id}|the flow run link> (*{flow_run_name}*)\n ```run_start: {uid}\nscan_id: {scan_id}``` ```{tb[-1]}```"
             )
-            mon_prefect_program.notify(program_message)
+            mon_prefect_est.notify(program_message)
             raise
 
     return end_of_run_workflow
@@ -80,10 +80,7 @@ def log_completion(dry_run=False):
 def end_of_run_workflow(stop_doc, api_key=None, dry_run=False):
     load_dotenv()
     uid = stop_doc["run_start"]
-    # data_validation(uid, api_key=api_key, dry_run=dry_run) # Use this line if the Mongo database-backed run
-    run = get_run_migration(
-        uid, api_key=api_key
-    )  # Use this line if SQL database-backed run
-    run.validate(raise_on_error=True)  # Only for SQL database-backed run
+    run = get_run_migration(uid, api_key=api_key) 
+    run.validate(raise_on_error=True) 
     log_completion(dry_run=dry_run)
     return True
